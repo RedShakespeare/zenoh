@@ -1,0 +1,32 @@
+[package]
+authors = { workspace = true }
+edition = { workspace = true }
+name = "zenoh-plugin-robot-status"
+publish = false
+rust-version = { workspace = true }
+version = { workspace = true }
+
+[features]
+default = ["dynamic_plugin"]
+dynamic_plugin = []
+
+[lib]
+name = "zenoh_plugin_robot_status"
+crate-type = ["cdylib"]
+
+[dependencies]
+git-version = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "rt", "rt-multi-thread"] }
+tracing = { workspace = true }
+ureq = { version = "2.12.1", features = ["json"] }
+zenoh = { workspace = true, features = ["default", "internal", "plugins", "unstable"] }
+zenoh-link = { workspace = true }
+zenoh-plugin-trait = { workspace = true }
+zenoh-protocol = { workspace = true }
+zenoh-transport = { workspace = true }
+zenoh-util = { workspace = true }
+
+[package.metadata.cargo-machete]
+ignored = ["git-version"]
