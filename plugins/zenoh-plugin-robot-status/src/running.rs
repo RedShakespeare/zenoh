@@ -82,6 +82,7 @@ impl RunningPluginTrait for RunningPlugin {
                     "name": guard.name,
                     "api_base_url": guard.config.api_base_url,
                     "project_id": guard.config.project_id,
+                    "keepalive_mode": format!("{:?}", guard.config.keepalive.mode).to_lowercase(),
                     "keepalive_timeout_secs": guard.config.keepalive.timeout_secs,
                 }),
             ));

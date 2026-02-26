@@ -16,7 +16,8 @@ ZENOHD_PORT="${ZENOHD_PORT:-7448}"
 BACKEND_PORT="${BACKEND_PORT:-18080}"
 PROJECT_ID="${PROJECT_ID:-project-123}"
 AUTH_TOKEN="${AUTH_TOKEN:-demo-token}"
-TIMEOUT_SECS="${TIMEOUT_SECS:-0}"
+KEEPALIVE_MODE="${KEEPALIVE_MODE:-disabled}"
+TIMEOUT_SECS="${TIMEOUT_SECS:-10}"
 PLUGIN_SO="${PLUGIN_SO:-./target/debug/libzenoh_plugin_robot_status.so}"
 
 CLIENT_IDS=(
@@ -88,7 +89,7 @@ start_zenohd() {
   ./target/debug/zenohd \
     -l "tcp/0.0.0.0:${ZENOHD_PORT}" \
     -P "robot_status:${PLUGIN_SO}" \
-    --cfg="plugins/robot_status:{api_base_url:\"http://127.0.0.1:${BACKEND_PORT}\",auth_token:\"${AUTH_TOKEN}\",project_id:\"${PROJECT_ID}\",keepalive:{timeout_secs:${TIMEOUT_SECS}}}" \
+    --cfg="plugins/robot_status:{api_base_url:\"http://127.0.0.1:${BACKEND_PORT}\",auth_token:\"${AUTH_TOKEN}\",project_id:\"${PROJECT_ID}\",keepalive:{mode:"${KEEPALIVE_MODE}",timeout_secs:${TIMEOUT_SECS}}}" \
     >"$WORK_DIR/zenohd.log" 2>&1 &
   echo $! > "$WORK_DIR/zenohd.pid"
   sleep 2

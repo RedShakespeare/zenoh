@@ -2,8 +2,24 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use serde::Deserialize;
 
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum KeepaliveMode {
+    Disabled,
+    TransportClosedOnly,
+    Inactivity,
+}
+
+impl Default for KeepaliveMode {
+    fn default() -> Self {
+        Self::Disabled
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct KeepaliveConfig {
+    #[serde(default)]
+    pub(crate) mode: KeepaliveMode,
     #[serde(default = "default_timeout_secs")]
     pub(crate) timeout_secs: u64,
 }
@@ -11,6 +27,7 @@ pub(crate) struct KeepaliveConfig {
 impl Default for KeepaliveConfig {
     fn default() -> Self {
         Self {
+            mode: KeepaliveMode::default(),
             timeout_secs: default_timeout_secs(),
         }
     }

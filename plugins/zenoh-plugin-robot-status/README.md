@@ -12,7 +12,8 @@ Dynamic plugin for `zenohd` that observes client transport sessions and reports 
   auth_token: "REPLACE_ME",
   project_id: "project-123",
   keepalive: {
-    timeout_secs: 0, // 0 disables timeout scanner
+    mode: "disabled", // disabled | transport_closed_only | inactivity
+    timeout_secs: 10,   // used only when mode=inactivity
   },
 }
 ```
@@ -34,5 +35,12 @@ Optional env vars:
 - `BACKEND_PORT` (default `18080`)
 - `PROJECT_ID` (default `project-123`)
 - `AUTH_TOKEN` (default `demo-token`)
-- `TIMEOUT_SECS` (default `0`)
+- `KEEPALIVE_MODE` (default `disabled`)
+- `TIMEOUT_SECS` (default `10`, only used for `inactivity`)
 - `PLUGIN_SO` (default `./target/debug/libzenoh_plugin_robot_status.so`)
+
+
+Keepalive modes:
+- `disabled`: no timeout scanner, OFFLINE only on transport closed.
+- `transport_closed_only`: same behavior as disabled (explicit semantic mode).
+- `inactivity`: enable timeout scanner and mark OFFLINE on inactivity timeout.

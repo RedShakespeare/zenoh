@@ -6,7 +6,7 @@ use zenoh::internal::zlock;
 
 use crate::{
     state::SharedState,
-    types::{Config, ReportCommand},
+    types::{Config, KeepaliveMode, ReportCommand},
 };
 
 const WORKER_THREAD_NUM: usize = 2;
@@ -79,6 +79,17 @@ fn spawn_report_worker(shared: Arc<SharedState>) {
 }
 
 fn spawn_keepalive_scanner(shared: Arc<SharedState>) {
+    match shared.config.keepalive.mode {
+        KeepaliveMode::Disabled | KeepaliveMode::TransportClosedOnly => {
+            info!(
+                mode = ?shared.config.keepalive.mode,
+                "keepalive timeout scanner disabled by mode"
+            );
+            return;
+        }
+        KeepaliveMode::Inactivity => {}
+    }
+
     if shared.config.keepalive.timeout_secs == 0 {
         info!("keepalive timeout scanner disabled (timeout_secs=0)");
         return;
