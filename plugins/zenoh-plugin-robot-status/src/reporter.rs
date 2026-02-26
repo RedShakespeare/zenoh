@@ -1,7 +1,7 @@
 use std::{future::Future, sync::Arc, time::Duration};
 
 use tokio::time::MissedTickBehavior;
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 use zenoh::internal::zlock;
 
 use crate::{
@@ -79,11 +79,6 @@ fn spawn_report_worker(shared: Arc<SharedState>) {
 }
 
 fn spawn_keepalive_scanner(shared: Arc<SharedState>) {
-    if shared.config.keepalive.timeout_secs == 0 {
-        info!("keepalive timeout scanner disabled (timeout_secs=0)");
-        return;
-    }
-
     spawn_runtime(async move {
         let mut ticker = tokio::time::interval(Duration::from_secs(1));
         ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
