@@ -30,6 +30,13 @@ Run:
 plugins/zenoh-plugin-robot-status/scripts/verify_local.sh
 ```
 
+Run full keepalive mode matrix test:
+
+```bash
+plugins/zenoh-plugin-robot-status/scripts/test_keepalive_modes.sh
+```
+
+
 Optional env vars:
 - `ZENOHD_PORT` (default `7448`)
 - `BACKEND_PORT` (default `18080`)

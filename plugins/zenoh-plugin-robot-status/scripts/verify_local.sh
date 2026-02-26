@@ -19,6 +19,7 @@ AUTH_TOKEN="${AUTH_TOKEN:-demo-token}"
 KEEPALIVE_MODE="${KEEPALIVE_MODE:-disabled}"
 TIMEOUT_SECS="${TIMEOUT_SECS:-10}"
 PLUGIN_SO="${PLUGIN_SO:-./target/debug/libzenoh_plugin_robot_status.so}"
+KEEP_WORK_DIR="${KEEP_WORK_DIR:-0}"
 
 CLIENT_IDS=(
   "3c95e7dca08d8f0f906801e9636aaa79"
@@ -30,6 +31,25 @@ WORK_DIR="${TMPDIR:-/tmp}/zenoh_robot_status_verify_$$"
 mkdir -p "$WORK_DIR"
 BACKEND_LOG="$WORK_DIR/backend.log"
 BACKEND_PID_FILE="$WORK_DIR/backend.pid"
+touch "$BACKEND_LOG"
+
+dump_logs() {
+  echo "--- backend.log ---" >&2
+  cat "$BACKEND_LOG" >&2 || true
+  echo "--- zenohd.log ---" >&2
+  cat "$WORK_DIR/zenohd.log" >&2 || true
+  for f in "$WORK_DIR"/client_*.log; do
+    [[ -f "$f" ]] || continue
+    echo "--- $(basename "$f") ---" >&2
+    cat "$f" >&2 || true
+  done
+}
+
+fail() {
+  echo "ERROR: $1" >&2
+  dump_logs
+  exit 1
+}
 
 cleanup() {
   set +e
@@ -39,7 +59,11 @@ cleanup() {
     kill "$pid" 2>/dev/null || true
     wait "$pid" 2>/dev/null || true
   done
-  rm -rf "$WORK_DIR"
+  if [[ "$KEEP_WORK_DIR" == "1" ]]; then
+    echo "KEEP_WORK_DIR=1, logs preserved at: $WORK_DIR"
+  else
+    rm -rf "$WORK_DIR"
+  fi
 }
 trap cleanup EXIT
 
@@ -71,6 +95,9 @@ HTTPServer(("127.0.0.1", port), H).serve_forever()
 PY
 
   sleep 1
+
+  [[ -f "$BACKEND_PID_FILE" ]] || fail "backend failed to start (missing pid file)"
+  kill -0 "$(cat "$BACKEND_PID_FILE")" 2>/dev/null || fail "backend process is not running"
 }
 
 ensure_binaries() {
@@ -78,10 +105,7 @@ ensure_binaries() {
   cargo build -p zenoh-plugin-robot-status -p zenohd --manifest-path Cargo.toml >/dev/null
   cargo build --manifest-path examples/Cargo.toml --example z_pub >/dev/null
 
-  [[ -f "$PLUGIN_SO" ]] || {
-    echo "ERROR: plugin library not found: $PLUGIN_SO" >&2
-    exit 1
-  }
+  [[ -f "$PLUGIN_SO" ]] || fail "plugin library not found: $PLUGIN_SO"
 }
 
 start_zenohd() {
@@ -89,7 +113,7 @@ start_zenohd() {
   ./target/debug/zenohd \
     -l "tcp/0.0.0.0:${ZENOHD_PORT}" \
     -P "robot_status:${PLUGIN_SO}" \
-    --cfg="plugins/robot_status:{api_base_url:\"http://127.0.0.1:${BACKEND_PORT}\",auth_token:\"${AUTH_TOKEN}\",project_id:\"${PROJECT_ID}\",keepalive:{mode:"${KEEPALIVE_MODE}",timeout_secs:${TIMEOUT_SECS}}}" \
+    --cfg="plugins/robot_status:{api_base_url:\"http://127.0.0.1:${BACKEND_PORT}\",auth_token:\"${AUTH_TOKEN}\",project_id:\"${PROJECT_ID}\",keepalive:{mode:\"${KEEPALIVE_MODE}\",timeout_secs:${TIMEOUT_SECS}}}" \
     >"$WORK_DIR/zenohd.log" 2>&1 &
   echo $! > "$WORK_DIR/zenohd.pid"
   sleep 2
@@ -113,7 +137,7 @@ stop_clients_one_by_one() {
   echo "[4/6] Stopping clients one by one..."
   for i in "${!CLIENT_IDS[@]}"; do
     pid="$(cat "$WORK_DIR/client_${i}.pid")"
-    kill "$pid"
+    kill "$pid" 2>/dev/null || true
     wait "$pid" 2>/dev/null || true
     sleep 2
   done
@@ -127,26 +151,12 @@ assert_backend_results() {
     online="PATCH /v1/${PROJECT_ID}/robots/${id}/status?status=ONLINE"
     offline="PATCH /v1/${PROJECT_ID}/robots/${id}/status?status=OFFLINE"
 
-    grep -F "$online" "$BACKEND_LOG" >/dev/null || {
-      echo "ERROR: missing ONLINE for ${id}" >&2
-      cat "$BACKEND_LOG" >&2
-      exit 1
-    }
-
-    grep -F "$offline" "$BACKEND_LOG" >/dev/null || {
-      echo "ERROR: missing OFFLINE for ${id}" >&2
-      cat "$BACKEND_LOG" >&2
-      exit 1
-    }
+    grep -F "$online" "$BACKEND_LOG" >/dev/null || fail "missing ONLINE for ${id}"
+    grep -F "$offline" "$BACKEND_LOG" >/dev/null || fail "missing OFFLINE for ${id}"
   done
 
-  if grep -F "X-Auth-Token: ${AUTH_TOKEN}" "$BACKEND_LOG" >/dev/null; then
-    echo "Auth token header verified."
-  else
-    echo "ERROR: missing auth token header" >&2
-    cat "$BACKEND_LOG" >&2
-    exit 1
-  fi
+  grep -F "X-Auth-Token: ${AUTH_TOKEN}" "$BACKEND_LOG" >/dev/null || fail "missing auth token header"
+  echo "Auth token header verified."
 }
 
 main() {
