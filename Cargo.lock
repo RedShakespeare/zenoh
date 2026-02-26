@@ -6426,6 +6426,7 @@ name = "zenoh-plugin-robot-status"
 version = "1.7.2"
 dependencies = [
  "git-version",
+ "lazy_static",
  "serde",
  "serde_json",
  "tokio",

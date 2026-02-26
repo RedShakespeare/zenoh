@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::{future::Future, sync::Arc, time::Duration};
 
 use tokio::time::MissedTickBehavior;
 use tracing::{error, warn};
@@ -9,6 +9,30 @@ use crate::{
     types::{Config, ReportCommand},
 };
 
+const WORKER_THREAD_NUM: usize = 2;
+const MAX_BLOCK_THREAD_NUM: usize = 50;
+
+lazy_static::lazy_static! {
+    static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(WORKER_THREAD_NUM)
+        .max_blocking_threads(MAX_BLOCK_THREAD_NUM)
+        .enable_all()
+        .build()
+        .expect("Unable to create runtime");
+}
+
+#[inline(always)]
+fn spawn_runtime(task: impl Future<Output = ()> + Send + 'static) {
+    match tokio::runtime::Handle::try_current() {
+        Ok(rt) => {
+            rt.spawn(task);
+        }
+        Err(_) => {
+            TOKIO_RUNTIME.spawn(task);
+        }
+    }
+}
+
 pub(crate) fn spawn_background_workers(shared: Arc<SharedState>) {
     spawn_report_worker(shared.clone());
     spawn_keepalive_scanner(shared);
@@ -16,7 +40,7 @@ pub(crate) fn spawn_background_workers(shared: Arc<SharedState>) {
 
 fn spawn_report_worker(shared: Arc<SharedState>) {
     if let Some(mut rx) = shared.take_report_rx() {
-        tokio::spawn(async move {
+        spawn_runtime(async move {
             while let Some(cmd) = rx.recv().await {
                 let result = send_patch_report(&shared.config, &cmd);
                 match result {
@@ -55,7 +79,7 @@ fn spawn_report_worker(shared: Arc<SharedState>) {
 }
 
 fn spawn_keepalive_scanner(shared: Arc<SharedState>) {
-    tokio::spawn(async move {
+    spawn_runtime(async move {
         let mut ticker = tokio::time::interval(Duration::from_secs(1));
         ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
         loop {
