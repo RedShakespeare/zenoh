@@ -26,7 +26,7 @@ pub(crate) struct Config {
 }
 
 fn default_timeout_secs() -> u64 {
-    30
+    0
 }
 
 #[derive(Clone)]

@@ -12,7 +12,7 @@ Dynamic plugin for `zenohd` that observes client transport sessions and reports 
   auth_token: "REPLACE_ME",
   project_id: "project-123",
   keepalive: {
-    timeout_secs: 30,
+    timeout_secs: 0, // 0 disables timeout scanner
   },
 }
 ```
