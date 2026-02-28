@@ -16,6 +16,20 @@ impl Default for KeepaliveMode {
     }
 }
 
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ReportMode {
+    Http,
+    DryRun,
+}
+
+impl Default for ReportMode {
+    fn default() -> Self {
+        Self::Http
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct KeepaliveConfig {
     #[serde(default)]
@@ -38,6 +52,8 @@ pub(crate) struct Config {
     pub(crate) api_base_url: String,
     pub(crate) auth_token: String,
     pub(crate) project_id: String,
+    #[serde(default)]
+    pub(crate) report_mode: ReportMode,
     #[serde(default)]
     pub(crate) keepalive: KeepaliveConfig,
 }

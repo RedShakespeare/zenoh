@@ -15,6 +15,7 @@ set -euo pipefail
 #   BACKEND_PORT_BASE (default: 18080)
 #   PROJECT_ID (default: project-123)
 #   AUTH_TOKEN (default: demo-token)
+#   REPORT_MODE (default: http, supports http|dry_run)
 #   PLUGIN_SO (default: ./target/debug/libzenoh_plugin_robot_status.so)
 #   INACTIVITY_TIMEOUT_SECS (default: 3)
 #   OTHER_TIMEOUT_SECS (default: 10)
@@ -32,6 +33,7 @@ ZENOHD_PORT_BASE="${ZENOHD_PORT_BASE:-7448}"
 BACKEND_PORT_BASE="${BACKEND_PORT_BASE:-18080}"
 PROJECT_ID="${PROJECT_ID:-project-123}"
 AUTH_TOKEN="${AUTH_TOKEN:-demo-token}"
+REPORT_MODE="${REPORT_MODE:-http}"
 PLUGIN_SO="${PLUGIN_SO:-./target/debug/libzenoh_plugin_robot_status.so}"
 INACTIVITY_TIMEOUT_SECS="${INACTIVITY_TIMEOUT_SECS:-3}"
 OTHER_TIMEOUT_SECS="${OTHER_TIMEOUT_SECS:-10}"
@@ -53,6 +55,7 @@ run_case() {
   BACKEND_PORT="$bport" \
   PROJECT_ID="$PROJECT_ID" \
   AUTH_TOKEN="$AUTH_TOKEN" \
+  REPORT_MODE="$REPORT_MODE" \
   PLUGIN_SO="$PLUGIN_SO" \
   "$VERIFY_SCRIPT"
 }

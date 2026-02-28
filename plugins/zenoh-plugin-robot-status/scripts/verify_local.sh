@@ -7,7 +7,7 @@ set -euo pipefail
 #   2) start zenohd with robot_status plugin,
 #   3) start multiple clients with fixed IDs,
 #   4) stop clients one by one,
-#   5) verify ONLINE/OFFLINE pair for each client id.
+#   5) verify report results (backend calls for http mode, logs for dry_run mode).
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$ROOT_DIR"
@@ -16,6 +16,7 @@ ZENOHD_PORT="${ZENOHD_PORT:-7448}"
 BACKEND_PORT="${BACKEND_PORT:-18080}"
 PROJECT_ID="${PROJECT_ID:-project-123}"
 AUTH_TOKEN="${AUTH_TOKEN:-demo-token}"
+REPORT_MODE="${REPORT_MODE:-http}"
 KEEPALIVE_MODE="${KEEPALIVE_MODE:-disabled}"
 TIMEOUT_SECS="${TIMEOUT_SECS:-10}"
 PLUGIN_SO="${PLUGIN_SO:-./target/debug/libzenoh_plugin_robot_status.so}"
@@ -113,7 +114,7 @@ start_zenohd() {
   ./target/debug/zenohd \
     -l "tcp/0.0.0.0:${ZENOHD_PORT}" \
     -P "robot_status:${PLUGIN_SO}" \
-    --cfg="plugins/robot_status:{api_base_url:\"http://127.0.0.1:${BACKEND_PORT}\",auth_token:\"${AUTH_TOKEN}\",project_id:\"${PROJECT_ID}\",keepalive:{mode:\"${KEEPALIVE_MODE}\",timeout_secs:${TIMEOUT_SECS}}}" \
+    --cfg="plugins/robot_status:{api_base_url:\"http://127.0.0.1:${BACKEND_PORT}\",auth_token:\"${AUTH_TOKEN}\",project_id:\"${PROJECT_ID}\",report_mode:\"${REPORT_MODE}\",keepalive:{mode:\"${KEEPALIVE_MODE}\",timeout_secs:${TIMEOUT_SECS}}}" \
     >"$WORK_DIR/zenohd.log" 2>&1 &
   echo $! > "$WORK_DIR/zenohd.pid"
   sleep 2
@@ -144,8 +145,17 @@ stop_clients_one_by_one() {
 }
 
 assert_backend_results() {
-  echo "[5/6] Verifying backend PATCH records..."
+  echo "[5/6] Verifying report records..."
   sleep 2
+
+  if [[ "$REPORT_MODE" == "dry_run" ]]; then
+    grep -F '"report_mode":"dry_run"' "$WORK_DIR/zenohd.log" >/dev/null || fail "missing dry_run config in zenohd logs"
+    if [[ -s "$BACKEND_LOG" ]]; then
+      fail "backend received PATCH records in dry_run mode"
+    fi
+    echo "Dry-run mode verified (no backend PATCH calls observed)."
+    return
+  fi
 
   for id in "${CLIENT_IDS[@]}"; do
     online="PATCH /v1/${PROJECT_ID}/robots/${id}/status?status=ONLINE"

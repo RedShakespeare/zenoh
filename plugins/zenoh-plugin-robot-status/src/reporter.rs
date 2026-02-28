@@ -6,7 +6,7 @@ use zenoh::internal::zlock;
 
 use crate::{
     state::SharedState,
-    types::{Config, KeepaliveMode, ReportCommand},
+    types::{Config, KeepaliveMode, ReportCommand, ReportMode},
 };
 
 const WORKER_THREAD_NUM: usize = 2;
@@ -127,13 +127,30 @@ fn send_patch_report(config: &Config, cmd: &ReportCommand) -> Result<u16, String
         cmd.robot_id,
         cmd.status.as_str()
     );
-    let response = ureq::patch(&url)
-        .set("X-Auth-Token", &config.auth_token)
-        .call();
 
-    match response {
-        Ok(resp) => Ok(resp.status()),
-        Err(ureq::Error::Status(code, _)) => Ok(code),
-        Err(e) => Err(e.to_string()),
+    match config.report_mode {
+        ReportMode::DryRun => {
+            info!(
+                report_mode = "dry_run",
+                session_id = %cmd.session_id,
+                robot_id = %cmd.robot_id,
+                status = cmd.status.as_str(),
+                url,
+                auth_token_present = !config.auth_token.is_empty(),
+                "robot status report dry-run"
+            );
+            Ok(200)
+        }
+        ReportMode::Http => {
+            let response = ureq::patch(&url)
+                .set("X-Auth-Token", &config.auth_token)
+                .call();
+
+            match response {
+                Ok(resp) => Ok(resp.status()),
+                Err(ureq::Error::Status(code, _)) => Ok(code),
+                Err(e) => Err(e.to_string()),
+            }
+        }
     }
 }
