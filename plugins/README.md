@@ -49,3 +49,7 @@ See also the [roadmap](https://github.com/eclipse-zenoh/roadmap) for more detail
 - [zenoh-backend-example](zenoh-backend-example)
 
   A simple example backend plugin for `zenoh-plugin-storage-manager`
+
+- [zenoh-plugin-robot-status](zenoh-plugin-robot-status)
+
+  Plugin that reports client connection status changes to an external HTTP endpoint.
