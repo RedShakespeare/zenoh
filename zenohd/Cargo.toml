@@ -28,6 +28,7 @@ version = { workspace = true }
 [features]
 default = ["zenoh/default"]
 shared-memory = ["zenoh/shared-memory"]
+robot-status-reporting = ["zenoh/robot-status-reporting"]
 
 [dependencies]
 clap = { workspace = true, features = ["derive"] }

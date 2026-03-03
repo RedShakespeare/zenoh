@@ -52,6 +52,7 @@ internal = [
 internal_config = []
 plugins = []
 runtime_plugins = ["plugins"]
+robot-status-reporting = ["dep:ureq"]
 shared-memory = [
   "zenoh-buffers/shared-memory",
   "zenoh-protocol/shared-memory",
@@ -105,6 +106,7 @@ serde_json = { workspace = true }
 socket2 = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt", "time"] }
 tokio-util = { workspace = true }
+ureq = { workspace = true, optional = true }
 tracing = { workspace = true }
 uhlc = { workspace = true, features = ["default"] }
 vec_map = { workspace = true }
