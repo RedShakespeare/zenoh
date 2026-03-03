@@ -1,5 +1,5 @@
 mod observer;
-mod reporter;
+mod workers;
 mod running;
 mod state;
 mod types;
@@ -15,7 +15,7 @@ use zenoh_plugin_trait::{plugin_long_version, plugin_version, Plugin};
 
 use crate::{
     observer::ConnectionObserver,
-    reporter::spawn_background_workers,
+    workers::spawn_background_workers,
     running::{RunningPlugin, RunningPluginInner},
     state::SharedState,
     types::Config,
