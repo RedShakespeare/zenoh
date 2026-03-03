@@ -67,6 +67,8 @@ use zenoh_result::ZResult;
 use zenoh_shm::api::client_storage::ShmClientStorage;
 use zenoh_task::TaskController;
 
+#[cfg(feature = "robot-status-reporting")]
+use super::robot_status;
 use super::{
     builders::close::{CloseBuilder, Closeable, Closee},
     connectivity,
@@ -735,6 +737,9 @@ impl Session {
             runtime.new_handler(Arc::new(connectivity::ConnectivityHandler::new(
                 session.downgrade(),
             )));
+
+            #[cfg(feature = "robot-status-reporting")]
+            robot_status::maybe_register(&runtime, session.downgrade());
 
             let (_face_id, primitives) = runtime.new_primitives(Arc::new(session.downgrade()));
 
