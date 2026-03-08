@@ -785,6 +785,20 @@
     },
   },
 
+  /// Robot status reporting (feature: `robot-status-reporting`)
+  robot_status_reporting: {
+    /// Enables robot status reporting.
+    enabled: false,
+    /// Report mode: `http` or `dry_run`.
+    report_mode: "http",
+    keepalive: {
+      /// Keepalive mode: `disabled`, `transport_closed_only` or `inactivity`.
+      mode: "transport_closed_only",
+      /// Timeout in seconds when keepalive mode is `inactivity`.
+      inactivity_timeout_sec: 10,
+    },
+  },
+
   //  ///
   //  /// Plugins configurations
   //  ///
