@@ -51,6 +51,7 @@ internal = [
 ]
 internal_config = []
 plugins = []
+robot-status-reporting = []
 runtime_plugins = ["plugins"]
 shared-memory = [
   "zenoh-buffers/shared-memory",
