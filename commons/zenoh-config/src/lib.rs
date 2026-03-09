@@ -866,6 +866,21 @@ validated_struct::validator! {
 
         },
 
+        /// Robot status reporting configuration.
+        pub robot_status_reporting: #[derive(Default)]
+        RobotStatusReportingConf {
+            #[serde(default = "set_false")]
+            pub enabled: bool,
+            #[serde(default)]
+            pub report_mode: RobotStatusReportMode,
+            pub keepalive: RobotStatusKeepaliveConf {
+                #[serde(default)]
+                pub mode: RobotStatusKeepaliveMode,
+                #[serde(default = "set_ten_seconds")]
+                pub inactivity_timeout_sec: u64,
+            },
+        },
+
         /// Namespace prefix.
         /// If not None, all outgoing key expressions will be
         /// automatically prefixed with specified string,
@@ -927,6 +942,32 @@ pub enum ShmInitMode {
     Lazy,
 }
 
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RobotStatusReportMode {
+    #[default]
+    Http,
+    DryRun,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RobotStatusKeepaliveMode {
+    Disabled,
+    #[default]
+    TransportClosedOnly,
+    Inactivity,
+}
+
+impl Default for RobotStatusKeepaliveConf {
+    fn default() -> Self {
+        Self {
+            mode: RobotStatusKeepaliveMode::TransportClosedOnly,
+            inactivity_timeout_sec: set_ten_seconds(),
+        }
+    }
+}
+
 impl Default for PermissionsConf {
     fn default() -> Self {
         PermissionsConf {
@@ -941,6 +982,9 @@ fn set_true() -> bool {
 }
 fn set_false() -> bool {
     false
+}
+fn set_ten_seconds() -> u64 {
+    10
 }
 
 #[test]
@@ -1837,7 +1881,9 @@ mod tests {
 
     use zenoh_protocol::core::{EndPoint, WhatAmI};
 
-    use crate::{Config, ModeDependentValue, ZenohId};
+    use crate::{
+        Config, ModeDependentValue, RobotStatusKeepaliveMode, RobotStatusReportMode, ZenohId,
+    };
 
     #[test]
     fn test_toml_config_format() {
@@ -1884,4 +1930,57 @@ mod tests {
             expected_config.to_string()
         );
     }
+
+
+    #[test]
+    fn robot_status_reporting_default_values() {
+        let config = Config::default();
+        let r = config.robot_status_reporting();
+        assert!(!r.enabled);
+        assert_eq!(r.report_mode, RobotStatusReportMode::Http);
+        assert_eq!(r.keepalive.mode, RobotStatusKeepaliveMode::TransportClosedOnly);
+        assert_eq!(r.keepalive.inactivity_timeout_sec, 10);
+    }
+
+    #[test]
+    fn robot_status_reporting_deserialization() {
+        let config = Config::from_deserializer(
+            &mut json5::Deserializer::from_str(
+                r#"{robot_status_reporting:{enabled:true,report_mode:"dry_run",keepalive:{mode:"inactivity",inactivity_timeout_sec:15}}}"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let r = config.robot_status_reporting();
+        assert!(r.enabled);
+        assert_eq!(r.report_mode, RobotStatusReportMode::DryRun);
+        assert_eq!(r.keepalive.mode, RobotStatusKeepaliveMode::Inactivity);
+        assert_eq!(r.keepalive.inactivity_timeout_sec, 15);
+    }
+
+    #[test]
+    fn robot_status_reporting_deserialization_uses_defaults() {
+        let config = Config::from_deserializer(
+            &mut json5::Deserializer::from_str(r#"{robot_status_reporting:{enabled:true}}"#)
+                .unwrap(),
+        )
+        .unwrap();
+        let r = config.robot_status_reporting();
+        assert!(r.enabled);
+        assert_eq!(r.report_mode, RobotStatusReportMode::Http);
+        assert_eq!(r.keepalive.mode, RobotStatusKeepaliveMode::TransportClosedOnly);
+        assert_eq!(r.keepalive.inactivity_timeout_sec, 10);
+    }
+
+    #[test]
+    fn robot_status_reporting_deserialization_rejects_unknown_keepalive_mode() {
+        let config = Config::from_deserializer(
+            &mut json5::Deserializer::from_str(
+                r#"{robot_status_reporting:{keepalive:{mode:"unknown"}}}"#,
+            )
+            .unwrap(),
+        );
+        assert!(config.is_err());
+    }
+
 }
