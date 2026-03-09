@@ -338,4 +338,31 @@ mod tests {
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].status, RobotConnectionStatus::Online);
     }
+    #[test]
+    fn service_transport_closed_unknown_session_is_noop() {
+        let reporter = DryRunReporter::default();
+        let service =
+            RobotStatusService::new(RobotStatusKeepaliveMode::TransportClosedOnly, reporter);
+
+        service.on_transport_closed("unknown").unwrap();
+        assert!(service.dry_run_events().is_empty());
+    }
+
+    #[test]
+    fn service_reopen_session_reports_online_again_after_offline() {
+        let reporter = DryRunReporter::default();
+        let service =
+            RobotStatusService::new(RobotStatusKeepaliveMode::TransportClosedOnly, reporter);
+
+        service.on_session_open("s1", "r1").unwrap();
+        service.on_transport_closed("s1").unwrap();
+        service.on_session_open("s1", "r1").unwrap();
+
+        let events = service.dry_run_events();
+        assert_eq!(events.len(), 3);
+        assert_eq!(events[0].status, RobotConnectionStatus::Online);
+        assert_eq!(events[1].status, RobotConnectionStatus::Offline);
+        assert_eq!(events[2].status, RobotConnectionStatus::Online);
+    }
+
 }
