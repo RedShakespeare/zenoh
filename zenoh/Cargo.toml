@@ -51,6 +51,7 @@ internal = [
 ]
 internal_config = []
 plugins = []
+robot-status-reporting = []
 runtime_plugins = ["plugins"]
 shared-memory = [
   "zenoh-buffers/shared-memory",
@@ -79,6 +80,7 @@ unstable = [
   "zenoh-config/unstable",
   "zenoh-keyexpr/unstable",
   "zenoh-protocol/unstable",
+  "zenoh-transport/unstable",
 ]
 
 [dependencies]

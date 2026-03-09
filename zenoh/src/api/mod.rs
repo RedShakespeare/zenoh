@@ -35,6 +35,8 @@ pub(crate) mod publisher;
 pub(crate) mod querier;
 pub(crate) mod query;
 pub(crate) mod queryable;
+#[cfg(feature = "robot-status-reporting")]
+pub(crate) mod robot_status_reporting;
 pub(crate) mod sample;
 pub(crate) mod scouting;
 pub(crate) mod selector;
