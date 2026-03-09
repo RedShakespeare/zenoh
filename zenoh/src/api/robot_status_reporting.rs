@@ -158,6 +158,25 @@ impl<R: RobotStatusReporter> RobotStatusService<R> {
         }
     }
 
+    pub(crate) fn on_inactivity_timeout(&self, session_id: &str) -> ZResult<()> {
+        match self.keepalive_mode {
+            RobotStatusKeepaliveMode::Inactivity => {
+                if let Some(robot_id) = self.registry.mark_offline_if_needed(session_id) {
+                    self.reporter.report(RobotStatusEvent {
+                        session_id: session_id.to_string(),
+                        robot_id,
+                        status: RobotConnectionStatus::Offline,
+                        trigger: RobotStatusTrigger::InactivityTimeout,
+                    })?;
+                }
+                Ok(())
+            }
+            RobotStatusKeepaliveMode::Disabled | RobotStatusKeepaliveMode::TransportClosedOnly => {
+                Ok(())
+            }
+        }
+    }
+
     pub(crate) fn remove_session(&self, session_id: &str) -> Option<String> {
         self.registry.remove(session_id)
     }
@@ -238,5 +257,47 @@ mod tests {
 
         let events = service.events();
         assert_eq!(events.len(), 1);
+    }
+
+    #[test]
+    fn inactivity_mode_reports_offline_on_timeout_once() {
+        let service =
+            RobotStatusService::new(RobotStatusKeepaliveMode::Inactivity, DryRunReporter::default());
+
+        service.on_session_open("s1", "r1").unwrap();
+        service.on_inactivity_timeout("s1").unwrap();
+        service.on_inactivity_timeout("s1").unwrap();
+
+        let events = service.events();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0].trigger, RobotStatusTrigger::SessionOpen);
+        assert_eq!(events[1].trigger, RobotStatusTrigger::InactivityTimeout);
+    }
+
+    #[test]
+    fn inactivity_timeout_ignored_when_mode_is_transport_closed_only() {
+        let service =
+            RobotStatusService::new(RobotStatusKeepaliveMode::TransportClosedOnly, DryRunReporter::default());
+
+        service.on_session_open("s1", "r1").unwrap();
+        service.on_inactivity_timeout("s1").unwrap();
+
+        let events = service.events();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].status, RobotConnectionStatus::Online);
+    }
+
+    #[test]
+    fn inactivity_and_transport_closed_do_not_double_report_offline() {
+        let service =
+            RobotStatusService::new(RobotStatusKeepaliveMode::Inactivity, DryRunReporter::default());
+
+        service.on_session_open("s1", "r1").unwrap();
+        service.on_inactivity_timeout("s1").unwrap();
+        service.on_transport_closed("s1").unwrap();
+
+        let events = service.events();
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[1].trigger, RobotStatusTrigger::InactivityTimeout);
     }
 }
