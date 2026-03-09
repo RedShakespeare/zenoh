@@ -12,19 +12,18 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-//! Robot status reporting domain model and dry-run reporter.
+//! Robot status reporting domain model, state registry, and dry-run service/reporter.
 #![allow(dead_code)]
-//!
-//! This module intentionally avoids any HTTP dependency for now.
-//! It provides:
-//! - domain events (`RobotStatusEvent`)
-//! - trigger/status enums
-//! - in-memory session registry for `session -> robot_id`
-//! - reporter abstraction + dry-run implementation for tests and integration scaffolding
 
-use std::{collections::HashMap, sync::Mutex};
+use std::sync::Mutex;
 
 use zenoh_result::ZResult;
+
+mod registry;
+mod service;
+
+pub(crate) use registry::RobotSessionRegistry;
+pub(crate) use service::RobotStatusService;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RobotConnectionStatus {
@@ -75,47 +74,11 @@ impl RobotStatusReporter for DryRunReporter {
     }
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct RobotSessionRegistry {
-    sessions: Mutex<HashMap<String, String>>,
-}
-
-impl RobotSessionRegistry {
-    pub(crate) fn upsert(&self, session_id: impl Into<String>, robot_id: impl Into<String>) {
-        self.sessions
-            .lock()
-            .expect("robot session registry mutex poisoned")
-            .insert(session_id.into(), robot_id.into());
-    }
-
-    pub(crate) fn remove(&self, session_id: &str) -> Option<String> {
-        self.sessions
-            .lock()
-            .expect("robot session registry mutex poisoned")
-            .remove(session_id)
-    }
-
-    pub(crate) fn robot_id(&self, session_id: &str) -> Option<String> {
-        self.sessions
-            .lock()
-            .expect("robot session registry mutex poisoned")
-            .get(session_id)
-            .cloned()
-    }
-
-    pub(crate) fn len(&self) -> usize {
-        self.sessions
-            .lock()
-            .expect("robot session registry mutex poisoned")
-            .len()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
-        DryRunReporter, RobotConnectionStatus, RobotSessionRegistry, RobotStatusEvent,
-        RobotStatusReporter, RobotStatusTrigger,
+        DryRunReporter, RobotConnectionStatus, RobotStatusEvent, RobotStatusReporter,
+        RobotStatusTrigger,
     };
 
     #[test]
@@ -145,24 +108,6 @@ mod tests {
         assert_eq!(events[0].trigger, RobotStatusTrigger::SessionOpen);
         assert_eq!(events[1].status, RobotConnectionStatus::Offline);
         assert_eq!(events[1].trigger, RobotStatusTrigger::TransportClosed);
-    }
-
-    #[test]
-    fn session_registry_upsert_get_remove() {
-        let registry = RobotSessionRegistry::default();
-
-        registry.upsert("session-1", "robot-a");
-        assert_eq!(registry.len(), 1);
-        assert_eq!(registry.robot_id("session-1"), Some("robot-a".to_string()));
-
-        registry.upsert("session-1", "robot-b");
-        assert_eq!(registry.len(), 1);
-        assert_eq!(registry.robot_id("session-1"), Some("robot-b".to_string()));
-
-        assert_eq!(registry.remove("session-1"), Some("robot-b".to_string()));
-        assert_eq!(registry.remove("session-1"), None);
-        assert_eq!(registry.robot_id("session-1"), None);
-        assert_eq!(registry.len(), 0);
     }
 
     #[test]
