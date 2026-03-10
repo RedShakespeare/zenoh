@@ -137,6 +137,7 @@ mod tests {
     }
 
     #[test]
+<<<<<<< codex/implement-transport_closed_only-behavior-48s54f
     fn inactivity_timeout_reports_offline_once() {
         let reporter = DryRunReporter::default();
         let service = RobotStatusService::new(RobotStatusKeepaliveMode::Inactivity, reporter);
@@ -205,6 +206,8 @@ mod tests {
     }
 
     #[test]
+=======
+>>>>>>> main
     fn disabled_mode_does_not_emit_offline() {
         let reporter = DryRunReporter::default();
         let service = RobotStatusService::new(RobotStatusKeepaliveMode::Disabled, reporter);
