@@ -19,9 +19,17 @@ use std::sync::Mutex;
 
 use zenoh_result::ZResult;
 
+<<<<<<< codex/implement-transport_closed_only-behavior-48s54f
+mod http_reporter;
 mod registry;
 mod service;
 
+pub(crate) use http_reporter::{HttpReporter, HttpReporterConfig};
+=======
+mod registry;
+mod service;
+
+>>>>>>> main
 pub(crate) use registry::RobotSessionRegistry;
 pub(crate) use service::RobotStatusService;
 
